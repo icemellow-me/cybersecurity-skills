@@ -1,13 +1,14 @@
 ---
 name: self-hosted-captcha-solvers
-version: 2.0
-description: Self-hosted captcha solving infrastructure — reCAPTCHA v2, Cloudflare Turnstile, image/OCR captchas, hCaptcha, coordinate captchas. 2captcha-compatible API servers on VPS.
+version: 3.0
+description: Self-hosted captcha solving infrastructure — reCAPTCHA v2, Cloudflare Turnstile, xCaptcha, image/OCR captchas, hCaptcha, coordinate captchas. 2captcha-compatible API servers on VPS.
 triggers:
   - captcha solving
   - captcha solver
   - recaptcha solver
   - turnstile solver
   - hcaptcha solver
+  - xcaptcha solver
   - image captcha OCR
   - captcha API server
   - 2captcha compatible
@@ -27,13 +28,21 @@ Build and operate self-hosted captcha solving servers with 2captcha-compatible H
                     │  hcaptcha-challenger      │──► Image/OCR, hCaptcha, Coord
                     │  Upstream forwarder       │──► Turnstile (:8877)
                     │                           │──► reCAPTCHA v2 (:8866)
+                    │                           │──► xCaptcha (:8899)
                     └──────────────────────────┘
 ```
 
-Three servers, three ports:
+Five servers, five ports:
 - **Port 8855** — Universal solver (image OCR + hCaptcha + forwarding hub)
 - **Port 8866** — reCAPTCHA v2 solver (Playwright + CaptchaPlugin extension)
 - **Port 8877** — Turnstile solver (Playwright + headless Chromium)
+- **Port 8899** — xCaptcha solver (API data leak + OCR brute-force)
+- **Port 8888** — Proxy catalog (500K proxy pool + REST API)
+
+Extension-specific instances (with json=1):
+- **Port 8844** — Universal solver (for Chrome extension)
+- **Port 8833** — reCAPTCHA v2 (for Chrome extension)
+- **Port 8822** — Turnstile (for Chrome extension)
 
 ## Server Details
 
@@ -59,6 +68,26 @@ Three servers, three ports:
 - **Start:** `DISPLAY=:99 python3 solver-server.py --api-key KEY --port 8877 --no-headless`
 - **Non-interactive Turnstile:** Works reliably (~730-char tokens)
 - **Managed/interactive Turnstile:** Extension assistance needed (Cloudflare 400020 detection)
+
+### xCaptcha Solver (port 8899)
+- **Repo:** `icemellow-me/xcaptcha-research`
+- **Engine:** API data leak (empty/custom types) + OCR brute-force (text type)
+- **API:** 2captcha-compatible (`POST /in.php`, `GET /res.php`) + health (`GET /health`) + stats (`GET /stats`)
+- **Methods:** `wcaptcha` (the 2captcha method name for xCaptcha)
+- **Start:** `python3 xcaptcha-solver.py --port 8899 --api-key KEY`
+- **Empty type:** Solves instantly via leaked answer hash
+- **Custom type:** Solves instantly via leaked coordinates
+- **Text type:** OCR + instruction matching + fresh-task brute-force (~12/15 combos avg)
+- **Dynamics type:** NOT auto-solved (WebSocket-based sliding puzzle)
+- **Key insight:** xCaptcha invalidates task key after wrong submission — text solver fetches fresh task per brute-force attempt
+
+### Proxy Catalog (port 8888)
+- **Repo:** `icemellow-me/proxy-catalog`
+- **Engine:** Continuous scraper (8 sources) + async validator + SQLite catalog + FastAPI
+- **API:** REST (`/proxies`, `/proxies/random`, `/proxies/text`, `/stats`, `/status`, `/zip/nearest`, `/zip/info`)
+- **Start:** `python3 run.py` (runs engine + API concurrently)
+- **Features:** 500K target catalog, zipcode fallback (haversine), geo enrichment, latency filters
+- **Scrape interval:** 3 min, **Recheck interval:** 5 min
 
 ## Process Management — CRITICAL SAFETY RULE
 
@@ -94,7 +123,7 @@ kill <PID>
 | Param | Type | Description |
 |-------|------|-------------|
 | `key` | string | API key |
-| `method` | string | `image`, `base64`, `userrecaptcha`, `turnstile`, `hcaptcha`, `coord` |
+| `method` | string | `image`, `base64`, `userrecaptcha`, `turnstile`, `hcaptcha`, `coord`, `wcaptcha` |
 | `file` | file | Image file (for `image` method) |
 | `body` | string | Base64 image (for `base64` method) |
 | `sitekey` / `googlekey` | string | Site key for token captchas |
@@ -140,6 +169,15 @@ Returns: `{"status": "solved", "solution": "...", "solve_time": 1.33}`
 - Managed/interactive turnstile may fail with Cloudflare 400020 detection
 - Tokens are ~730 chars, start with version prefix like `1.`
 
+### xCaptcha
+- **Empty type:** Trivially solved — API leaks the answer hash directly
+- **Custom type:** Trivially solved — API leaks ground-truth coordinates
+- **Text type:** OCR reads cells + instruction matching + brute-force with fresh tasks per attempt
+- **Dynamics type:** WebSocket-based sliding puzzle — NOT auto-solved yet
+- Text brute-force is needed because xCaptcha **invalidates the task key after any wrong submission**
+- Each brute-force attempt fetches a fresh xCaptcha task (avoids invalidation)
+- Site keys: `text=11aa6260...`, `custom=5b4fc1a2...`, `dynamics=506195d0...`, `empty=a537c95d...`
+
 ### Coordinate/Click Captchas
 - ddddocr detection mode finds object positions in images
 - Returns coordinate string like `x1,y1;x2,y2`
@@ -151,9 +189,10 @@ The universal solver can forward to dedicated solvers:
 ```bash
 export RECAPTCHA_SOLVER_URL=http://127.0.0.1:8866
 export TURNSTILE_SOLVER_URL=http://127.0.0.1:8877
+export XCAPTCHA_SOLVER_URL=http://127.0.0.1:8899
 ```
 
-When it receives `method=userrecaptcha` or `method=turnstile`, it HTTP-forwards the request to the respective upstream solver, polls the result, and returns it to the caller. This gives users a single API endpoint for all captcha types.
+When it receives `method=userrecaptcha`, `method=turnstile`, or `method=wcaptcha`, it HTTP-forwards the request to the respective upstream solver, polls the result, and returns it to the caller. This gives users a single API endpoint for all captcha types.
 
 ## Docker Container Notes
 

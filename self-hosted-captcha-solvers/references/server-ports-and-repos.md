@@ -5,13 +5,27 @@
 | Port | Server | Repo | Protocol |
 |------|--------|------|----------|
 | 8855 | Universal Captcha Solver | `icemellow-me/universal-captcha-solver` | 2captcha + JSON |
+| 8844 | Universal (ext) | `icemellow-me/universal-captcha-solver` | 2captcha + JSON (json=1) |
 | 8866 | reCAPTCHA v2 Solver | `icemellow-me/recaptcha-v2-solver` | 2captcha |
+| 8833 | reCAPTCHA v2 (ext) | `icemellow-me/recaptcha-v2-solver` | 2captcha (json=1) |
 | 8877 | Turnstile Solver | `icemellow-me/turnstile-solver` | 2captcha + FlareSolverr |
+| 8822 | Turnstile (ext) | `icemellow-me/turnstile-solver` | 2captcha (json=1) |
+| 8899 | xCaptcha Solver | `icemellow-me/xcaptcha-research` | 2captcha |
+| 8888 | Proxy Catalog | `icemellow-me/proxy-catalog` | REST API |
+| 8000 | Puter Gateway | `icemellow-me/puter-gateway` | OpenAI SSE |
+| 3000 | Open WebUI | — | Web UI |
+| 8642 | Hermes Agent | — | Agent API |
 
 ## GitHub Repos (All Public)
 - https://github.com/icemellow-me/universal-captcha-solver
 - https://github.com/icemellow-me/recaptcha-v2-solver
 - https://github.com/icemellow-me/turnstile-solver
+- https://github.com/icemellow-me/xcaptcha-research
+- https://github.com/icemellow-me/captcha-solver-extension
+- https://github.com/icemellow-me/unified-capcha-solver
+- https://github.com/icemellow-me/proxy-catalog
+- https://github.com/icemellow-me/puter-gateway
+- https://github.com/icemellow-me/cybersecurity-skills
 
 ## Quick-Start Commands
 
