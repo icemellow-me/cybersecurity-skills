@@ -39,6 +39,13 @@ Unified captcha solving infrastructure — reCAPTCHA v2, Cloudflare Turnstile, i
 - `server-ports-and-repos.md` — Server ports, repos, and architecture
 - `captcha-research.md` — Captcha solving research and approaches
 
+### ☎️ FreePBX Docker
+Deploy FreePBX 17 in Docker with Asterisk 21, MariaDB, custom SIP/RTP ports, and full persistence. Covers all critical pitfalls (missing PJSIP includes, Apache asterisk user, ephemeral freepbx.conf).
+
+**References:**
+- `escomputers-docker-compose.yaml` — Official docker-compose from escomputers/freepbx-docker
+- `escomputers-run.sh` — Official run.sh with RTP iptables rules and install command
+
 ## Usage with Hermes Agent
 
 Copy any skill directory to your Hermes skills folder:
